@@ -26,7 +26,8 @@ def se_calc(x, x_hat):
     return se
 
 ############################################################
-dir = '../../HCP_3T_P/'
+dir = 'dataset/' # data directory
+## Data parameters
 window_size = 30
 max_window_size = 50
 ## Model parameters
@@ -34,16 +35,16 @@ dim_val = 760 # This can be any value divisible by n_heads. 512 is used in the o
 n_heads = 8 # The number of attention heads (aka parallel attention layers). dim_val must be divisible by this number
 n_decoder_layers = 4 # Number of times the decoder layer is stacked in the decoder
 n_encoder_layers = 4 # Number of times the encoder layer is stacked in the encoder
-input_size = 379 # The number of input variables. 1 if univariate forecasting.
+input_size = 219 # The number of input variables. 1 if univariate forecasting.
 dec_seq_len = 1 # length of input given to decoder. Can have any integer value.
 output_sequence_length = 1 # Length of the target sequence, i.e. how many time steps should your forecast cover
-num_predicted_features = 379
+num_predicted_features = 219
 batch_first = True
 ## Training parameters
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 lr = 1e-4
-epochs = 10
-batch_size = 512
+epochs = 20
+batch_size = 256
 shuffle = True
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ############################################################
@@ -56,11 +57,12 @@ with open('test_subjects.pickle', 'rb') as file:
 with open('train_subjects.pickle', 'rb') as file:
     train_sub_split = pickle.load(file)
 fold = 0
-for fold in range(num_folds):
+for fold in range(9, num_folds):
     train_sub = train_sub_split[fold]
     test_sub = test_sub_split[fold]
     
     print(f"Fold {fold+1}:")
+    # print(f"train内容：{train_sub}")
     print(f"Train subjects length: {len(train_sub)}")
     print(f"Test subjects length: {len(test_sub)}")
     enc_seq_len = window_size # length of input given to encoder. Can have any integer value.
@@ -111,6 +113,9 @@ for fold in range(num_folds):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            if torch.isnan(encoder_input).any() or torch.isnan(target).any():
+                print("NaN detected in input batch!")
+                exit()
 
             # Storing the losses in a list for plotting
             single_epo_loss.append(loss.cpu().detach().numpy())

@@ -27,7 +27,7 @@ def se_calc(x, x_hat):
 
 ################################################################
 """ parameters """
-dir = '../../HCP_3T_P/'
+dir = 'dataset_test/'
 folds = 10
 window_size = 30
 max_window_size = 50
@@ -42,7 +42,7 @@ all_sub = os.listdir(dir)
 all_sub.sort()
 
 # 10-fold
-with open('test_subjects.pickle', 'rb') as file:
+with open('testpy_subjects.pickle', 'rb') as file:
     test_sub_split = pickle.load(file)
 for fold in range(folds):
     test_sub = test_sub_split[fold]
@@ -53,18 +53,24 @@ for fold in range(folds):
     # get all files 
     files = []
     for sub in test_sub: # loop through subjects id
-        sub_files = glob.glob(dir+sub+'/*REST*_p.npy') # get the file names from the subfolder
-        sub_files.sort() # sort the file names
-        files += sub_files # add to the list
+        files += [dir + sub]
+        
+    # for sub in range(len(test_sub)): # loop through subjects id
+        # sub_files = glob.glob(dir+sub+'/*REST*_p.npy') # get the file names from the subfolder
+        # sub_files.sort() # sort the file names
+        # files += test_sub[sub] # add to the list
+    # print(f'test files: {files}')
+    # exit()
 
     # Load Model
-    model = torch.load('new_models/win-30_transformer_fold_'+str(fold+1)+'_epo-10_win-30.pth')
+    model = torch.load('new_models/epo20_win30/transformer_fold_'+str(fold+1)+'_epo-20_win-30.pth')
     model.eval()
     test_mse = []
     test_regional_mse = []
     all_ses_data_predicted = []
+    print("test files:", files)
     with torch.no_grad():
-        progress = tqdm(range(len(files) * (1200 - max_window_size)))
+        progress = tqdm(range(len(files) * (210 - max_window_size)))
         for f in files:
             ses_mse = []
             ses_regional_mse = []
@@ -109,6 +115,6 @@ for fold in range(folds):
     print(test_mse.shape)
     print(test_regional_mse.shape)
     print(all_ses_data_predicted.shape)
-    np.save('new_models/test/all_sub_fold_'+str(fold+1)+'_test_mse_entire_pred.npy', test_mse)
+    np.save('new_models/test_entire/all_sub_fold_'+str(fold+1)+'_test_mse_entire_pred.npy', test_mse)
     # np.save('new_models/test/fold_'+str(fold+1)+'_test_regional_se_entire_pred.npy', test_regional_mse)
-    np.save('new_models/test/all_sub_fold_'+str(fold+1)+'_fmri_predicted.npy', all_ses_data_predicted)
+    np.save('new_models/test_entire/all_sub_fold_'+str(fold+1)+'_fmri_predicted.npy', all_ses_data_predicted)

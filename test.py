@@ -29,7 +29,7 @@ def se_calc(x, x_hat):
 ################################################################
 """ parameters """
 folds = 10
-dir = '../../HCP_3T_P/'
+dir = 'dataset_test/'
 max_window_size = 50
 window_size = 30
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -44,7 +44,7 @@ all_sub = os.listdir(dir)
 all_sub.sort()
 
 # 10-fold
-with open('test_subjects.pickle', 'rb') as file:
+with open('testpy_subjects.pickle', 'rb') as file:
     test_sub_split = pickle.load(file)
 for fold in range(folds):
     test_sub = test_sub_split[fold]
@@ -56,7 +56,7 @@ for fold in range(folds):
     test_data = rfMRIDataset(dir, test_sub, window_size, max_window_size)
     test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False, pin_memory=True)
     # test
-    model = torch.load('new_models/transformer_fold_'+str(fold+1)+'_epo-10_win-30.pth')
+    model = torch.load('new_models/epo20_win30/transformer_fold_'+str(fold+1)+'_epo-20_win-30.pth')
     model.eval()
     test_mse = []
     test_regional_mse = []
@@ -87,6 +87,7 @@ for fold in range(folds):
             # test_regional_mse.append(se)
             
     test_mse = np.array(test_mse)
+    print('Test Loss (MSE): ', np.mean(test_mse))
     # test_regional_mse = np.array(test_regional_mse)
     print(test_mse.shape)
     # print(test_regional_mse.shape)

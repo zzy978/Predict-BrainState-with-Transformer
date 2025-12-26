@@ -16,12 +16,20 @@ class rfMRIDataset(Dataset):
     def __init__(self, data_dir, sub_list, sample_size, max_window_size):
         self.data_dir = data_dir
         self.subjects = sub_list
-        self.files    = []
+        self.files    = []  # list of file names
+        
         for sub in self.subjects: # loop through subjects id
-            sub_files = glob.glob(self.data_dir+sub+'/*REST*_p.npy') # get the file names from the subfolder
-            sub_files.sort() # sort the file names
-            self.files += sub_files # add to the list
+            self.files += [self.data_dir + sub]  # get the file names from the subfolder
+        #     print(sub)
+        #     sub_files = glob.glob(self.data_dir+sub+'/*subj*.npy') # get the file names from the subfolder
+        #     sub_files.sort() # sort the file names
+        #     self.files += sub_files # add to the list
+        #     break
 
+        self.files.sort()
+        # print(len(self.files))
+        # print(self.files)
+        # exit()
         # some additional attributes for calculation
         self.max_window_size = max_window_size
         self.num_ses = len(self.files) # the number of sessions
