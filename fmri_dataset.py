@@ -13,7 +13,7 @@ class rfMRIDataset(Dataset):
             max_window_size: maximum window size we tried, just want to make sure the test results are comparable
     """
 
-    def __init__(self, data_dir, sub_list, sample_size, max_window_size):
+    def __init__(self, data_dir, sub_list, sample_size, max_window_size, pred_len=20):
         self.data_dir = data_dir
         self.subjects = sub_list
         self.files    = []  # list of file names
@@ -32,10 +32,11 @@ class rfMRIDataset(Dataset):
         # exit()
         # some additional attributes for calculation
         self.max_window_size = max_window_size
+        self.pred_len = pred_len
         self.num_ses = len(self.files) # the number of sessions
         self.sample_size = sample_size # number of timepoints for each sample
         self.time_size = np.load(self.files[0]).shape[0] # total number of time points for one session
-        self.num_samples_single = self.time_size - self.max_window_size # number of samples for each session
+        self.num_samples_single = self.time_size - self.pred_len - self.max_window_size # number of samples for each session
 
     def __len__(self):
         total_num_samples = self.num_samples_single * self.num_ses # total number of samples for all sessions
@@ -46,5 +47,5 @@ class rfMRIDataset(Dataset):
         sample_idx = (idx % self.num_samples_single) + self.max_window_size  # tthe index for the time point to be predicted
         data = np.load(self.files[session_idx]) # load the corresponding session
         time_series = data[sample_idx-self.sample_size:sample_idx, :] # use index slicing to get the time series (input)
-        time_point = data[sample_idx, :] # get the expected output
+        time_point = data[sample_idx: sample_idx + self.pred_len, :] # get the expected output
         return time_series, time_point

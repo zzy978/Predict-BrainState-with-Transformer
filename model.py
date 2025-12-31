@@ -46,7 +46,7 @@ class TimeSeriesTransformer(nn.Module):
         input_size: int,
         dec_seq_len: int,
         batch_first: bool=True,
-        out_seq_len: int=58,
+        out_seq_len: int=58,  # output length = target length
         max_seq_len: int=5000,
         dim_val: int=512,
         n_encoder_layers: int=4,
