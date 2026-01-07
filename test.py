@@ -56,7 +56,7 @@ for fold in range(folds):
     test_data = rfMRIDataset(dir, test_sub, window_size, max_window_size)
     test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False, pin_memory=True)
     # test
-    model = torch.load('new_models/epo20_win30/transformer_fold_'+str(fold+1)+'_epo-20_win-30.pth')
+    model = torch.load('new_models/hcp_epo10_win30/hcp_transformer_fold_'+str(fold+1)+'_epo-10_win-30.pth')
     model.eval()
     test_mse = []
     test_regional_mse = []
@@ -74,12 +74,12 @@ for fold in range(folds):
             encoder_input = data.to(device)
             decoder_input = data[:, -1, :].unsqueeze(1).to(device) # add one dimension for single time point
             # ensure the datatype is float64
-            encoder_input = encoder_input.to(torch.float64)
-            decoder_input = decoder_input.to(torch.float64)
+            encoder_input = encoder_input.float()
+            decoder_input = decoder_input.float()
             # Output of the Transformer
             pred = model(encoder_input, decoder_input) # (batch_size, 1, # of regions)
             target = target.unsqueeze(1).to(device)
-            target = target.to(torch.float64)
+            target = target.float()
             error = mse_calc(target, pred)
             # se = se_calc(target, pred)
             test_mse.append(error.item())
@@ -92,8 +92,8 @@ for fold in range(folds):
     print(test_mse.shape)
     # print(test_regional_mse.shape)
     if shuffle:
-        np.save('new_models/test/all_sub_fold_'+str(fold+1)+'_test_mse_shuffled.npy', test_mse)
+        np.save('results/hcp_to_sczdata/all_sub_fold_'+str(fold+1)+'_test_mse_shuffled.npy', test_mse)
         # np.save('large_window/test/fold_'+str(fold+1)+'_test_regional_se_shuffled.npy', test_regional_mse)
     else:
-        np.save('new_models/test/all_sub_fold_'+str(fold+1)+'_test_mse.npy', test_mse)
+        np.save('results/hcp_to_sczdata/all_sub_fold_'+str(fold+1)+'_test_mse.npy', test_mse)
         # np.save('large_window/test/fold_'+str(fold+1)+'_test_regional_se.npy', test_regional_mse)

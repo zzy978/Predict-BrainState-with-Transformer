@@ -12,6 +12,8 @@ import pandas as pd
 from torch import nn
 import torch.nn.functional as F
 import pickle
+import argparse
+
 
 def mse_calc(x, x_hat):
     reproduction_loss = nn.functional.mse_loss(x_hat, x)
@@ -26,7 +28,7 @@ def se_calc(x, x_hat):
     return se
 
 ############################################################
-dir = 'dataset/' # data directory
+dir = 'dataset_hcp/' # 需要改
 ## Data parameters
 window_size = 30
 max_window_size = 50
@@ -41,23 +43,28 @@ output_sequence_length = 1 # Length of the target sequence, i.e. how many time s
 num_predicted_features = 219
 batch_first = True
 ## Training parameters
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 lr = 1e-4
-epochs = 20
+epochs = 10
 batch_size = 256
 shuffle = True
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ############################################################
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--fold", type=int, default=None, help="0-9; if None, run all folds")
+args = parser.parse_args()
+
 
 # k-fold XV
 num_folds = 10
-with open('test_subjects.pickle', 'rb') as file:
+with open('test_hcp_subjects.pickle', 'rb') as file:  # 需要改
     test_sub_split = pickle.load(file)
-with open('train_subjects.pickle', 'rb') as file:
+with open('train_hcp_subjects.pickle', 'rb') as file:  # 需要改
     train_sub_split = pickle.load(file)
 fold = 0
-for fold in range(9, num_folds):
+fold_list = range(num_folds) if args.fold is None else [args.fold]
+for fold in fold_list:
     train_sub = train_sub_split[fold]
     test_sub = test_sub_split[fold]
     
@@ -72,7 +79,7 @@ for fold in range(9, num_folds):
     train_dataloader = torch.utils.data.DataLoader(dataset=train_data, batch_size=batch_size, shuffle=shuffle)
     # validation
     test_data = rfMRIDataset(dir, test_sub, window_size, max_window_size)
-    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=1, shuffle=False, pin_memory=True)
+    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=64, shuffle=False, pin_memory=True)
 
     # initialize the model
     model = TimeSeriesTransformer(
@@ -87,7 +94,9 @@ for fold in range(9, num_folds):
         batch_first=batch_first,
         num_predicted_features=num_predicted_features)
     model.to(device)
-    model = model.double()
+    # model = model.double()
+    model = model.float()
+
 
     # train the model
     # Define the loss function and optimizer
@@ -104,11 +113,14 @@ for fold in range(9, num_folds):
 
             encoder_input = data.to(device)
             decoder_input = data[:, -1, :].unsqueeze(1).to(device) # add one dimension for single time point
-            encoder_input = encoder_input.to(torch.float64)
-            decoder_input = decoder_input.to(torch.float64)
+            # encoder_input = encoder_input.to(torch.float64)
+            # decoder_input = decoder_input.to(torch.float64)
+            encoder_input = encoder_input.float()
+            decoder_input = decoder_input.float()
+
             pred = model(encoder_input, decoder_input) # (batch_size, 1, # of regions)
             trg = target.unsqueeze(1).to(device)
-            trg = trg.to(torch.float64)
+            trg = trg.float()
             loss = loss_func(trg, pred)
             optimizer.zero_grad()
             loss.backward()
@@ -133,12 +145,12 @@ for fold in range(9, num_folds):
                 encoder_input = data.to(device)
                 decoder_input = data[:, -1, :].unsqueeze(1).to(device) # add one dimension for single time point
                 # ensure the datatype is float64
-                encoder_input = encoder_input.to(torch.float64)
-                decoder_input = decoder_input.to(torch.float64)
+                encoder_input = encoder_input.float()
+                decoder_input = decoder_input.float()
                 # Output of the Transformer
                 pred = model(encoder_input, decoder_input) # (batch_size, 1, # of regions)
                 target = target.unsqueeze(1).to(device)
-                target = target.to(torch.float64)
+                target = target.float()
                 error = mse_calc(target, pred)
                 se = se_calc(target, pred)
                 test_mse.append(error.item())
@@ -149,15 +161,15 @@ for fold in range(9, num_folds):
     val_loss_hist = np.array(val_loss_hist)
 
     # save the model
-    torch.save(model, 'transformer_fold_'+str(fold+1)+'_epo-'+str(epochs)+'_win-'+str(window_size)+'.pth')
+    torch.save(model, 'hcp_transformer_fold_'+str(fold+1)+'_epo-'+str(epochs)+'_win-'+str(window_size)+'.pth')
     # save the loss history
-    np.save('transformer_train_loss_fold_'+str(fold+1)+'_epo-'+str(epochs)+'_win-'+str(window_size)+'.npy', loss_hist)
-    np.save('transformer_valid_loss_fold_'+str(fold+1)+'_epo-'+str(epochs)+'_win-'+str(window_size)+'.npy', val_loss_hist)
+    np.save('hcp_transformer_train_loss_fold_'+str(fold+1)+'_epo-'+str(epochs)+'_win-'+str(window_size)+'.npy', loss_hist)
+    np.save('hcp_transformer_valid_loss_fold_'+str(fold+1)+'_epo-'+str(epochs)+'_win-'+str(window_size)+'.npy', val_loss_hist)
     # plot the loss history
     x_values = list(range(1, epochs+1))
     plt.plot(x_values, loss_hist.mean(axis=1))
     plt.xlabel('Epochs')
     plt.ylabel('MSE Loss')
     plt.title('Training Loss')
-    plt.savefig('transformer_train_loss_fold_'+str(fold+1)+'_epo-'+str(epochs)+'_win-'+str(window_size)+'.png')
+    plt.savefig('hcp_transformer_train_loss_fold_'+str(fold+1)+'_epo-'+str(epochs)+'_win-'+str(window_size)+'.png')
     plt.clf()
