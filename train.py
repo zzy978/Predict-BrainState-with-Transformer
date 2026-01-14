@@ -93,7 +93,7 @@ for fold in range(0, num_folds):
         batch_first=batch_first,
         num_predicted_features=num_predicted_features)
     model.to(device)
-    model = model.double()
+    # model = model.double()
 
     # train the model
     # Define the loss function and optimizer
@@ -110,11 +110,11 @@ for fold in range(0, num_folds):
 
             encoder_input = data.to(device)
             decoder_input = data[:, -1, :].unsqueeze(1).to(device) # add one dimension for single time point
-            encoder_input = encoder_input.to(torch.float64)
-            decoder_input = decoder_input.to(torch.float64)
+            encoder_input = encoder_input.float()
+            decoder_input = decoder_input.float()
             # pred = model(encoder_input, decoder_input) # (batch_size, 1, # of regions)
             trg = target.to(device)
-            trg = trg.to(torch.float64)
+            trg = trg.float()
             tgt_in = torch.cat([decoder_input, trg[:, :-1, :]], dim=1)
             tgt_mask = gen_square_subsequent_mask(pred_len, device)
             pred = model(src=encoder_input, tgt=tgt_in, tgt_mask=tgt_mask)  # [B, K, ROI]
@@ -148,12 +148,12 @@ for fold in range(0, num_folds):
                 encoder_input = data.to(device)
                 decoder_input = data[:, -1, :].unsqueeze(1).to(device) # add one dimension for single time point
                 # ensure the datatype is float64
-                encoder_input = encoder_input.to(torch.float64)
-                decoder_input = decoder_input.to(torch.float64)
+                encoder_input = encoder_input.float()
+                decoder_input = decoder_input.float()
                 # Output of the Transformer
                 # pred = model(encoder_input, decoder_input) # (batch_size, 1, # of regions)
                 target = target.to(device)
-                target = target.to(torch.float64)
+                target = target.float()
                 tgt_in = torch.cat([decoder_input, target[:, :-1, :]], dim=1)
                 tgt_mask = gen_square_subsequent_mask(pred_len, device)
                 pred = model(src=encoder_input, tgt=tgt_in, tgt_mask=tgt_mask)  # [B, K, ROI]
