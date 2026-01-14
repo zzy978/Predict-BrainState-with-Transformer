@@ -33,9 +33,9 @@ def gen_square_subsequent_mask(sz, device):
 ################################################################
 """ 参数 """
 folds = 10
-dir = 'dataset_test/'
-max_window_size = 100
-window_size = 100
+dir = 'dataset_hcp_test/'
+max_window_size = 50
+window_size = 30
 pred_len = 20
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -49,7 +49,7 @@ all_sub = os.listdir(dir)
 all_sub.sort()
 
 # 10 折划分
-with open('testpy_subjects.pickle', 'rb') as file:
+with open('testpy_hcp_subjects.pickle', 'rb') as file:
     test_sub_split = pickle.load(file)
 for fold in range(folds):
     test_sub = test_sub_split[fold]
@@ -61,8 +61,8 @@ for fold in range(folds):
     test_data = rfMRIDataset(dir, test_sub, window_size, max_window_size, pred_len=pred_len)
     test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False, pin_memory=True)
     # 测试
-    model = torch.load('new_models/epo20_win100/transformer_fold_'+str(fold+1)+'_epo-20_win-100.pth', map_location=device)
-    model = model.to(device).double()
+    model = torch.load('new_models/hcp_epo10_win30_teaching/hcp_transformer_fold_'+str(fold+1)+'_epo-10_win-30.pth', map_location=device, weights_only=False)
+    model = model.to(device)
     model.eval()
     test_mse_first = []
     test_mse_aux = []
@@ -78,14 +78,16 @@ for fold in range(folds):
                 data = data.unsqueeze(0)
 
             # 准备编码器和解码器的输入
+            # print(data.shape)
+            # exit()
             encoder_input = data.to(device)
             decoder_input = data[:, -1, :].unsqueeze(1).to(device) # 增加单时间点维度
             # 确保数据类型为 float64
-            encoder_input = encoder_input.to(torch.float64)
-            decoder_input = decoder_input.to(torch.float64)
+            encoder_input = encoder_input.float()
+            decoder_input = decoder_input.float()
             # Transformer 输出
             target = target.to(device)
-            target = target.to(torch.float64)
+            target = target.float()
             tgt_in = torch.cat([decoder_input, target[:, :-1, :]], dim=1)
             tgt_mask = gen_square_subsequent_mask(pred_len, device)
             pred = model(src=encoder_input, tgt=tgt_in, tgt_mask=tgt_mask)  # [B, K, ROI]
@@ -108,14 +110,14 @@ for fold in range(folds):
     print('Test Weighted MSE: ', np.mean(test_mse_weighted))
     print(test_mse_weighted.shape)
     if shuffle:
-        np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_first_shuffled.npy', test_mse_first)
-        np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_aux_shuffled.npy', test_mse_aux)
-        np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_weighted_shuffled.npy', test_mse_weighted)
+        # np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_first_shuffled.npy', test_mse_first)
+        # np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_aux_shuffled.npy', test_mse_aux)
+        # np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_weighted_shuffled.npy', test_mse_weighted)
         # 兼容旧命名：保持 weighted 作为 test_mse
-        np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_shuffled.npy', test_mse_weighted)
+        np.save('results/hcp_test_teaching/single/all_sub_fold_'+str(fold+1)+'_test_mse_shuffled.npy', test_mse_weighted)
     else:
-        np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_first.npy', test_mse_first)
-        np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_aux.npy', test_mse_aux)
-        np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_weighted.npy', test_mse_weighted)
+        # np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_first.npy', test_mse_first)
+        # np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_aux.npy', test_mse_aux)
+        # np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse_weighted.npy', test_mse_weighted)
         # 兼容旧命名：保持 weighted 作为 test_mse
-        np.save('new_models/test_teacherforcing/all_sub_fold_'+str(fold+1)+'_test_mse.npy', test_mse_weighted)
+        np.save('results/hcp_test_teaching/single/all_sub_fold_'+str(fold+1)+'_test_mse.npy', test_mse_weighted)

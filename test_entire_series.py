@@ -31,7 +31,7 @@ def gen_square_subsequent_mask(sz, device):
 
 ################################################################
 """ 参数 """
-dir = 'dataset_test/'
+dir = 'dataset_hcp_test/'
 folds = 10
 window_size = 30
 max_window_size = 50
@@ -47,7 +47,7 @@ all_sub = os.listdir(dir)
 all_sub.sort()
 
 # 10 折划分
-with open('testpy_subjects.pickle', 'rb') as file:
+with open('testpy_hcp_subjects.pickle', 'rb') as file:
     test_sub_split = pickle.load(file)
 for fold in range(folds):
     test_sub = test_sub_split[fold]
@@ -68,8 +68,8 @@ for fold in range(folds):
     # exit()
 
     # 加载模型
-    model = torch.load('new_models/epo20_win30_teaching/transformer_fold_'+str(fold+1)+'_epo-20_win-30.pth', map_location=device)
-    model = model.to(device).double()
+    model = torch.load('new_models/hcp_epo10_win30_teaching/hcp_transformer_fold_'+str(fold+1)+'_epo-10_win-30.pth', map_location=device, weights_only=False)
+    model = model.to(device)
     model.eval()
     test_mse = []
     test_mse_first = []
@@ -101,11 +101,11 @@ for fold in range(folds):
                 encoder_input = data.to(device)
                 decoder_input = data[:, -1, :].unsqueeze(1).to(device) # 增加单时间点维度
                 # 确保数据类型为 float64
-                encoder_input = encoder_input.to(torch.float64)
-                decoder_input = decoder_input.to(torch.float64)
+                encoder_input = encoder_input.float()
+                decoder_input = decoder_input.float()
                 # Transformer 输出
                 target = target.to(device)
-                target = target.to(torch.float64)
+                target = target.float()
                 tgt_in = decoder_input
                 tgt_mask = gen_square_subsequent_mask(step_len, device)
                 pred = model(src=encoder_input, tgt=tgt_in, tgt_mask=tgt_mask)  # [1, 1, 脑区]
@@ -148,9 +148,9 @@ for fold in range(folds):
     # print(test_regional_mse.shape)
     # print(test_mse_weighted.shape)
     # print(all_ses_data_predicted.shape)
-    np.save('new_models/test_entire_teaching_30win/all_sub_fold_'+str(fold+1)+'_test_mse_entire_pred.npy', test_mse)
+    np.save('results/hcp_test_teaching/entire/all_sub_fold_'+str(fold+1)+'_test_mse_entire_pred.npy', test_mse)
     # np.save('new_models/test_entire/all_sub_fold_'+str(fold+1)+'_test_mse_first_entire_pred.npy', test_mse_first)
     # np.save('new_models/test_entire/all_sub_fold_'+str(fold+1)+'_test_mse_aux_entire_pred.npy', test_mse_aux)
     # np.save('new_models/test_entire/all_sub_fold_'+str(fold+1)+'_test_mse_weighted_entire_pred.npy', test_mse_weighted)
     # # np.save('new_models/test/fold_'+str(fold+1)+'_test_regional_se_entire_pred.npy', test_regional_mse)
-    np.save('new_models/test_entire_teaching_30win/all_sub_fold_'+str(fold+1)+'_fmri_predicted.npy', all_ses_data_predicted)
+    np.save('results/hcp_test_teaching/entire/all_sub_fold_'+str(fold+1)+'_fmri_predicted.npy', all_ses_data_predicted)
